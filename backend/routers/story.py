@@ -16,11 +16,16 @@ router = APIRouter(
     tags=['stories']
 )
 
+# Purpose:
+# Tracks users across multiple API requests
+# Persists in browser via cookies
+# Links stories to specific users/sessions
 def get_session_id(session_id: Optional[str] = Cookie(None)):
     if not session_id:
         session_id = str(uuid.uuid4())
     return session_id
 
+# User sends theme → Job created → Background task queued → Immediate response
 @router.post("/create", response_model=StoryJobResponse)
 def create_story(request: CreateStoryRequest, background_tasks: BackgroundTasks, response: Response, session_id: str = Depends(get_session_id), db: Session = Depends(get_db)):
     """
@@ -31,10 +36,10 @@ def create_story(request: CreateStoryRequest, background_tasks: BackgroundTasks,
     job_id = str(uuid.uuid4())
 
     job = StoryJob(
-        job_id = job_id,
-        session_id = session_id,
-        theme = request.theme,
-        status = "pending"
+        job_id = job_id,            # Unique job identifier
+        session_id = session_id,    # Link to user session
+        theme = request.theme,      # User's story theme
+        status = "pending"          # Initial job state
     )
 
     db.add(job)
@@ -43,8 +48,12 @@ def create_story(request: CreateStoryRequest, background_tasks: BackgroundTasks,
     background_tasks.add_task(generate_story_task, job_id, request.theme, session_id)
     return job
 
+# Background story Generation task, AI work
+# "pending" → "processing" → "completed" (success)
+#                       ↓
+#                    "failed" (on error)
 def generate_story_task(job_id: str, theme: str, session_id: str):
-    db = SessionLocal()
+    db = SessionLocal() # New DB session for background task
 
     try:
         job = db.query(StoryJob).filter(StoryJob.job_id == job_id).first()
@@ -55,12 +64,12 @@ def generate_story_task(job_id: str, theme: str, session_id: str):
             job.status = "processing"
             db.commit()
             
-            # Simulate story generation logic
+            # story generation logic
             story = StoryGenerator.generate_story(db, session_id, theme)
 
-            job.story_id = story.id
-            job.status = "completed"
-            job.completed_at = datetime.now()
+            job.story_id = story.id             # Link generated story to job   
+            job.status = "completed"            # Mark as successful
+            job.completed_at = datetime.now()   # Record completion time
             db.commit()
         
         except Exception as e:
@@ -72,6 +81,8 @@ def generate_story_task(job_id: str, theme: str, session_id: str):
     finally:
         db.close()
 
+# Story Retrieval Endpoint - Get Complete Story
+#  Purpose: Returns the full interactive story with all paths and choices
 @router.get("/{story_id}", response_model=CompleteStoryResponse)
 def get_complete_story(story_id: int, db: Session = Depends(get_db)):
     """
@@ -110,3 +121,21 @@ def build_complete_story_tree(db: Session, story: Story) -> CompleteStoryRespons
         root_node=node_dict[root_node.id],
         all_nodes=node_dict
     )
+
+# {
+#   "id": 1,
+#   "title": "The Underwater Pirates",
+#   "session_id": "user123",
+#   "created_at": "2025-09-30T...",
+#   "root_node": {
+#     "id": 1,
+#     "content": "You dive into the ocean...",
+#     "is_root": true,
+#     "options": [...]
+#   },
+#   "all_nodes": {
+#     "1": {...},
+#     "2": {...},
+#     "3": {...}
+#   }
+# }
