@@ -83,7 +83,7 @@ def generate_story_task(job_id: str, theme: str, session_id: str):
 
 # Story Retrieval Endpoint - Get Complete Story
 #  Purpose: Returns the full interactive story with all paths and choices
-@router.get("/{story_id}", response_model=CompleteStoryResponse)
+@router.get("/{story_id}/complete", response_model=CompleteStoryResponse)
 def get_complete_story(story_id: int, db: Session = Depends(get_db)):
     """
     Retrieves the complete story including all nodes and choices.
