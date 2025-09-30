@@ -47,7 +47,7 @@ class StoryJobBase(BaseModel):
 #   "completed_at": "2025-09-29T10:32:15Z"
 # }
 class StoryJobResponse(BaseModel):
-    job_id: int
+    job_id: str
     status: str
     story_id: Optional[int] = None
     error: Optional[str] = None

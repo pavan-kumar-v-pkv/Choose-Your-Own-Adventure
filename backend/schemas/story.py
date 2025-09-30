@@ -26,15 +26,18 @@ class StoryOptionsSchema(BaseModel):
 # content: str: The actual story text/narrative
 # is_ending: bool = False: Whether this node ends the story
 # is_winning_ending: bool = False: Whether this is a successful ending
+# is_root: bool = False: Whether this is the starting node of the story
 # {
 #   "content": "You find yourself in a dark forest...",
 #   "is_ending": false,
-#   "is_winning_ending": false
+#   "is_winning_ending": false,
+#   "is_root": false
 # }
 class StoryNodeBase(BaseModel):
     content: str
     is_ending: bool = False
     is_winning_ending: bool = False
+    is_root: bool = False
 
 
 # Purpose: Full story node response with ID and options (inherits from StoryNodeBase)
